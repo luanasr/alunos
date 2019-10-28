@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Disciplina</title>
+    <link rel="stylesheet" type="text/css" href="css/bootstrap.css">
+    <link rel="stylesheet" type="text/css" href="css/jquery.dataTables.min.css">
+    <link rel="stylesheet" type="text/css" href="css/style.css">
+
+    <script src="js/jquery-3.3.1.js"></script>
+    <script src="js/bootstrap.js" ></script>
+    <script src="js/jquery.dataTables.min.js" ></script>
+    <script src="js/dataTables.responsive.min.js" ></script>
+    
+    <script>
+        var table;
+        var edit = false;
+        var editing_id;
+
+        $(document).ready(async function(){
+            table = $('#my_table').DataTable({
+                "columnDefs":[
+                    {"targets": [0], "visible": false},
+                    {"targets": [0], "ordenable": false},
+                    {"targets": [0], "searchable": false},
+                    {"targets": 4, "responsivePriority": 1},
+                    {"targets": 1, "responsivePriority": 2},
+                    {"targets": [1, 2, 3], "className": "text-center"},
+                    {"targets": [4], "className": "text-center text-nowrap"},
+                ],
+                responsive: true,
+                searching: true,
+                paging: true
+            });
+
+            read();
+        });
+        
+        function add(){
+            edit = false; // seta o flag para criação
+            limpaModal();  //limpa o modal
+            removeAlertas(); //remove os alertas
+            $('#modal').modal(); //mostra o modal
+        }
+
+        function limpaModal(){
+            document.getElementById('nome').value = ''; //seta o valor do campo nome para ''
+            document.getElementById('professor').value = ''; //seta o valor do campo  para ''
+            document.getElementById('semestre_indicado').value = ''; // ...
+        }
+        
+        function removeAlertas(){
+            window.setTimeout(function(){ //seta um timer para rodar depois de 3 segundos
+                $('#alerta_erro').removeClass('show'); //esconde alerta de erro
+                $('#alerta_sucesso').removeClass('show'); //esconde alerta de sucesso
+                $('#alerta_wait').removeClass('show'); //esconde alerta de aguarde
+            },3000)//os 3 segundos configura aqui
+        }
+
+        function save_it(){
+            if(edit){//verificar flag. se editando chama update, se nao, chama o create
+                update();
+            }else{
+                create();
+            }
+        }
+
+        function edit_it(caller){
+            edit = true;
+            let data = table.row($(caller).closest('tr')).data();
+            
+            limpaModal();
+            //console.log(data);
+            document.getElementById('nome').value = data[1];
+            document.getElementById('professor').value = data[2];
+            document.getElementById('semestre_indicado').value = data[3];
+
+            editing_id = data[0];
+
+            $('#modal').modal();
+        }
+
+        function delete_it(caller){
+            let data = table.row($(caller).closest('tr')).data();
+           
+            editing_id = data[0];
+
+            deleta();
+        }
+
+
+        //create
+        function create(){
+            let obj = {};
+            obj.nome = document.getElementById('nome').value;
+            obj.professor = document.getElementById('professor').value;
+            obj.semestre_indicado = document.getElementById('semestre_indicado').value;
+
+            removeAlertas();
+            
+            $.ajax({
+                type: "POST",
+                url: "./classes/services/createDisciplina.php",
+                dataType: "html",
+                async: true,
+                timeout: 30000,
+                data: {data: JSON.stringify(obj)},
+                success: function(response){
+                    //vai rodar aqui se der certo
+                    console.log(response);
+                    $('#alerta_sucesso').addClass('show');
+                    
+                    read();
+                },
+                error: function(error){
+                    //roda aqui se der errado
+                    console.log(error);
+                    document.getElementById('alerta_erro').innerHTML = error.responseText;
+                    $('#alerta_erro').addClass('show');
+                    
+                },
+                complete:function (){
+                    $('#modal').modal('hide');
+                    removeAlertas();
+                }
+            });
+
+
+        }
+
+        //update
+        function update(){
+            let obj = {};
+            obj.nome = document.getElementById('nome').value;
+            obj.professor = document.getElementById('professor').value;
+            obj.semestre_indicado = document.getElementById('semestre_indicado').value;
+            
+            obj.id = editing_id;
+            
+            removeAlertas();
+            
+            $.ajax({
+                type: "POST",
+                url: "./classes/services/updateDisciplina.php",
+                dataType: "html",
+                async: true,
+                timeout: 30000,
+                data: {data: JSON.stringify(obj)},
+                success: function(response){
+                    //vai rodar aqui se der certo
+                    console.log(response);
+                    $('#alerta_sucesso').addClass('show');
+                    
+                    read();
+                },
+                error: function(error){
+                    //roda aqui se der errado
+                    console.log(error);
+                    document.getElementById('alerta_erro').innerHTML = error.responseText;
+                    $('#alerta_erro').addClass('show');
+                    
+                },
+                complete:function (){
+                    $('#modal').modal('hide');
+                    removeAlertas();
+                }
+            });
+
+
+        }
+
+        //delete
+        function deleta(){
+            let obj = {};
+            
+            obj.id = editing_id;
+            
+            removeAlertas();
+            
+            $.ajax({
+                type: "POST",
+                url: "./classes/services/deleteDisciplina.php",
+                dataType: "html",
+                async: true,
+                timeout: 30000,
+                data: {data: JSON.stringify(obj)},
+                success: function(response){
+                    //vai rodar aqui se der certo
+                    console.log(response);
+                    $('#alerta_sucesso').addClass('show');
+                    
+                    read();
+                },
+                error: function(error){
+                    //roda aqui se der errado
+                    console.log(error);
+                    document.getElementById('alerta_erro').innerHTML = error.responseText;
+                    $('#alerta_erro').addClass('show');
+                    
+                },
+                complete:function (){
+                    $('#modal').modal('hide');
+                    removeAlertas();
+                }
+            });
+
+
+        }
+
+        //read
+        function read(){
+           
+            removeAlertas();
+            
+            $.ajax({
+                type: "POST",
+                url: "./classes/services/readDisciplina.php",
+                dataType: "html",
+                async: true,
+                timeout: 30000,
+                data: {},
+                success: function(response){
+                    //vai rodar aqui se der certo
+                    //console.log(response);
+                    let dados = JSON.parse(response);
+                    //console.log(dados);
+                    //$('#alerta_sucesso').addClass('show');
+                    parseData(dados);
+                    //read();
+                },
+                error: function(error){
+                    //roda aqui se der errado
+                    console.log(error);
+                    document.getElementById('alerta_erro').innerHTML = error.responseText;
+                    $('#alerta_erro').addClass('show');
+                    
+                },
+                complete:function (){
+                    removeAlertas();
+                }
+            });
+
+
+        }
+
+        //parse
+        function parseData(dados){
+            table.clear().draw();
+            var lines = Array();
+            dados.forEach(function(object, key){
+                lines[key] = [object.id, object.nome, object.professor, object.semestre_indicado, '<img title="editar" src="./img/edit.png" onclick="edit_it(this)" class="img_table"> &nbsp; <img title="remover" src="./img/remove.png" onclick="delete_it(this)" class="img_table">'];
+            });
+            table.rows.add(lines).draw(false);
+            table.columns.adjust().responsive.recalc();
+        }
+
+    </script>
+
+</head>
+<body >
+    <center>
+    <div class="mainBody">
+        
+        <div class="modal fade in" id="modal" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title" >Disciplina</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-sm-12">
+                                <label for="nome">Nome</label>
+                                <input id="nome" type="text" class="form-control" ></input>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                    <label for="professor">Professor</label>
+                                    <input id="professor" type="text" class="form-control" ></input>
+                                
+                            </div>
+                            <div class="col-sm-6">
+                                    <label for="semestre_indicado">Semestre</label>
+                                    <input id="semestre_indicado" type="number" class="form-control" ></input>
+                                
+                            </div>
+                        </div>
+                    </div>
+                    <div class="clearfix"></div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal" >Cancelar</button>
+                        <button type="button" class="btn btn-primary" onclick="save_it()">Salvar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-sm-2"></div>
+            <div class="col-sm-8">
+                <div id="alerta_erro" role="alert" class="alert alert-danger alerta hide" >
+                    Erro
+                </div>
+                <div id="alerta_wait" role="alert" class="alert alert-warning alerta hide">
+                    Aguarde...
+                </div>
+                <div id="alerta_sucesso" role="alert" class="alert alert-success alerta hide">
+                    Sucesso
+                </div>
+            </div>
+            <div class="col-sm-2"></div>
+        </div>
+        
+        <div class="row" style="margin-bottom: 20px;">
+            <div class="col-sm-2">
+                <button onclick="add()" style="border-radius: 5px;" type="button" class="btn btn-primary" >Add Disciplina</button>
+            </div>
+        </div>
+
+        <table id="my_table" class="display table-hover table-responsive" cellspacing="0" width="100%" >
+            <thead role="row" style="background-color: rgb(252, 252, 252);" >
+                <tr>
+                    <th>id</th>
+                    <th>Nome</th>
+                    <th>Professor</th>
+                    <th>Semestre</th>
+                    <th width="5%">Ação</th>
+                </tr>
+            </thead>
+            <tbody>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    </center>
+   
+</body>
+</html>
